@@ -3,7 +3,23 @@
 <a href="{{ url_for('workouts.list_create_workouts') }}" style="color: var(--ios-blue); text-decoration: none; font-size: 15px;">‹ Voltar</a>
 <h2 style="margin-top: 8px;">{{ workout.category }}</h2>
 <p style="color: var(--ios-subtext); margin-top: -8px; margin-bottom: 16px; font-size: 14px;">{{ workout.date }} {% if workout.notes %}• {{ workout.notes }}{% endif %}</p>
- 
+
+{% if last_set %}
+<div class="repeat-card" id="repeat-card"
+     data-exercise-id="{{ last_set.exercise_id }}"
+     data-exercise-name="{{ last_set.exercise_name }}"
+     data-reps="{{ last_set.reps }}"
+     data-weight="{{ last_set.weight }}">
+    <div class="repeat-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+    </div>
+    <div class="repeat-text">
+        <div class="repeat-label">Repetir última série</div>
+        <div class="repeat-detail">{{ last_set.exercise_name }} — {{ last_set.reps }} reps × {{ last_set.weight }} kg</div>
+    </div>
+</div>
+{% endif %}
+
 <div class="ios-card">
     <div class="ios-card-title">
         <span>Séries Registadas</span>
@@ -34,28 +50,57 @@
         <p>Nenhuma série ainda.</p>
     </div>
 </div>
- 
+
 <button class="ios-fab" data-sheet-open="sheet-new-set" aria-label="Nova série">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 </button>
 {% endblock %}
- 
+
 {% block sheets %}
 <div class="sheet-overlay" id="sheet-new-set">
     <div class="sheet">
         <div class="sheet-handle"></div>
         <div class="sheet-title">Adicionar Série</div>
+
+        {% if used_exercises %}
+        <div class="chip-row" id="exercise-chips">
+            {% for ex in used_exercises %}
+            <button type="button" class="chip{% if loop.first %} active{% endif %}"
+                    data-id="{{ ex.id }}" data-reps="{{ ex.last_reps }}" data-weight="{{ ex.last_weight }}">
+                {{ ex.name }}
+            </button>
+            {% endfor %}
+            <button type="button" class="chip" id="chip-other">Outro exercício</button>
+        </div>
+        {% endif %}
+
         <form method="POST" action="{{ url_for('workouts.workout_detail', workout_id=workout.id) }}"
-              data-ajax data-ajax-success="onSetCreated" data-success-message="Série registada">
+              data-ajax data-ajax-success="onSetCreated" data-success-message="Série registada"
+              data-keep-sheet-open data-no-reset id="set-form">
             <div class="ios-input-group">
-                <select name="exercise_id" class="ios-input" required>
+                <select name="exercise_id" id="exercise-select" class="ios-input" {% if used_exercises %}style="display:none;"{% endif %} required>
                     {% for ex in exercises %}
                     <option value="{{ ex.id }}">{{ ex.muscle_group }} - {{ ex.name }}</option>
                     {% endfor %}
                 </select>
-                <div style="display: flex; gap: 8px;">
-                    <input type="number" name="reps" class="ios-input" placeholder="Reps" min="1" required>
-                    <input type="number" step="0.5" name="weight" class="ios-input" placeholder="Carga (kg)" min="0" required>
+
+                <div style="display:flex; gap:12px;">
+                    <div class="stepper-field">
+                        <div class="stepper-field-label">Reps</div>
+                        <div class="stepper-row">
+                            <button type="button" class="stepper-btn" data-step="reps" data-delta="-1">−</button>
+                            <input type="number" name="reps" id="reps-input" class="stepper-value" min="1" required>
+                            <button type="button" class="stepper-btn" data-step="reps" data-delta="1">+</button>
+                        </div>
+                    </div>
+                    <div class="stepper-field">
+                        <div class="stepper-field-label">Carga (kg)</div>
+                        <div class="stepper-row">
+                            <button type="button" class="stepper-btn" data-step="weight" data-delta="-2.5">−</button>
+                            <input type="number" step="0.5" name="weight" id="weight-input" class="stepper-value" min="0" required>
+                            <button type="button" class="stepper-btn" data-step="weight" data-delta="2.5">+</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <button type="submit" class="ios-btn">
@@ -66,13 +111,83 @@
     </div>
 </div>
 {% endblock %}
- 
+
 {% block scripts %}
 <script>
+(function () {
+    const select = document.getElementById('exercise-select');
+    const repsInput = document.getElementById('reps-input');
+    const weightInput = document.getElementById('weight-input');
+    const chipRow = document.getElementById('exercise-chips');
+    const chipOther = document.getElementById('chip-other');
+
+    // Pré-preencher com a série mais recente registada (qualquer exercício)
+    {% if last_set %}
+    repsInput.value = {{ last_set.reps }};
+    weightInput.value = {{ last_set.weight }};
+    select.value = "{{ last_set.exercise_id }}";
+    {% endif %}
+
+    if (chipRow) {
+        chipRow.querySelectorAll('.chip[data-id]').forEach(chip => {
+            chip.addEventListener('click', () => {
+                chipRow.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                select.value = chip.dataset.id;
+                select.style.display = 'none';
+                if (chip.dataset.reps) repsInput.value = chip.dataset.reps;
+                if (chip.dataset.weight) weightInput.value = chip.dataset.weight;
+            });
+        });
+    }
+
+    if (chipOther) {
+        chipOther.addEventListener('click', () => {
+            chipRow.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            chipOther.classList.add('active');
+            select.style.display = 'block';
+            select.focus();
+        });
+    }
+
+    document.querySelectorAll('.stepper-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = btn.dataset.step === 'reps' ? repsInput : weightInput;
+            const delta = parseFloat(btn.dataset.delta);
+            const min = parseFloat(input.min) || 0;
+            let value = (parseFloat(input.value) || 0) + delta;
+            if (value < min) value = min;
+            input.value = btn.dataset.step === 'reps' ? Math.round(value) : Math.round(value * 2) / 2;
+            window.iosInteractive.haptic(6);
+        });
+    });
+
+    // Repetir última série com um único toque, sem abrir a sheet
+    const repeatCard = document.getElementById('repeat-card');
+    if (repeatCard) {
+        repeatCard.addEventListener('click', async () => {
+            try {
+                const data = await window.iosInteractive.postForm(
+                    "{{ url_for('workouts.workout_detail', workout_id=workout.id) }}",
+                    {
+                        exercise_id: repeatCard.dataset.exerciseId,
+                        reps: repeatCard.dataset.reps,
+                        weight: repeatCard.dataset.weight
+                    }
+                );
+                onSetCreated(data);
+                window.iosInteractive.toast('Série repetida', 'success');
+            } catch (err) {
+                window.iosInteractive.toast('Não foi possível repetir a série.', 'error');
+            }
+        });
+    }
+})();
+
 function onSetCreated(s) {
     const emptyState = document.getElementById('sets-empty');
     if (emptyState) emptyState.style.display = 'none';
- 
+
     const list = document.getElementById('sets-list');
     const li = document.createElement('li');
     li.className = 'swipe-wrap';
@@ -95,7 +210,7 @@ function onSetCreated(s) {
     list.appendChild(li);
     window.iosInteractive.initSwipe(list);
     window.iosInteractive.applyStagger(document);
- 
+
     const countEl = document.getElementById('set-count');
     if (countEl) countEl.textContent = String(parseInt(countEl.textContent || '0', 10) + 1);
 }
