@@ -1,34 +1,86 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Treinos</h2>
-
-<div class="ios-card">
-    <div class="ios-card-title">Novo Treino</div>
-    <form method="POST">
-        <div class="ios-input-group">
-            <!-- AQUI: adiciona value="{{ today }}" -->
-            <input type="date" name="date" class="ios-input" value="{{ today }}" required>
-            <input type="text" name="category" class="ios-input" placeholder="Divisão (ex: Peito / Tríceps)" required>
-            <input type="text" name="notes" class="ios-input" placeholder="Notas (opcional)">
-        </div>
-        <button type="submit" class="ios-btn">Criar Treino</button>
-    </form>
-</div>
-
+ 
 <div class="ios-card">
     <div class="ios-card-title">Histórico Completo</div>
-    <ul class="ios-list">
+    <ul class="ios-list" id="workouts-list">
         {% for w in workouts %}
-        <li class="ios-list-item">
-            <div>
-                <strong>{{ w.category }}</strong><br>
-                <small style="color: var(--ios-subtext);">{{ w.date }}</small>
+        <li class="swipe-wrap" data-id="{{ w.id }}">
+            <div class="swipe-actions">
+                <button class="swipe-delete-btn" data-delete-url="{{ url_for('workouts.delete_workout', workout_id=w.id) }}">Apagar</button>
             </div>
-            <a href="{{ url_for('workouts.workout_detail', workout_id=w.id) }}" style="color: var(--ios-blue); text-decoration: none; font-weight: 600;">Abrir ›</a>
+            <div class="swipe-content">
+                <div class="ios-list-item">
+                    <div>
+                        <strong>{{ w.category }}</strong><br>
+                        <small style="color: var(--ios-subtext);">{{ w.date }}</small>
+                    </div>
+                    <a href="{{ url_for('workouts.workout_detail', workout_id=w.id) }}" style="color: var(--ios-blue); text-decoration: none; font-weight: 600;">Abrir ›</a>
+                </div>
+            </div>
         </li>
-        {% else %}
-        <li class="ios-list-item" style="color: var(--ios-subtext);">Sem registos.</li>
         {% endfor %}
     </ul>
+    <div class="empty-state" id="workouts-empty" {% if workouts %}style="display:none;"{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="14" x="6" y="5" rx="2"/><path d="M12 5v14"/></svg>
+        <p>Sem registos ainda.</p>
+    </div>
+</div>
+ 
+<button class="ios-fab" data-sheet-open="sheet-new-workout" aria-label="Novo treino">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+{% endblock %}
+ 
+{% block sheets %}
+<div class="sheet-overlay" id="sheet-new-workout">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">Novo Treino</div>
+        <form method="POST" action="{{ url_for('workouts.list_create_workouts') }}"
+              data-ajax data-ajax-success="onWorkoutCreated" data-success-message="Treino criado">
+            <div class="ios-input-group">
+                <input type="date" name="date" class="ios-input" value="{{ today }}" data-today="{{ today }}" required>
+                <input type="text" name="category" class="ios-input" placeholder="Divisão (ex: Peito / Tríceps)" required>
+                <input type="text" name="notes" class="ios-input" placeholder="Notas (opcional)">
+            </div>
+            <button type="submit" class="ios-btn">
+                <span class="ios-spinner"></span>
+                <span class="btn-label">Criar Treino</span>
+            </button>
+        </form>
+    </div>
 </div>
 {% endblock %}
+ 
+{% block scripts %}
+<script>
+function onWorkoutCreated(w) {
+    const emptyState = document.getElementById('workouts-empty');
+    if (emptyState) emptyState.style.display = 'none';
+ 
+    const list = document.getElementById('workouts-list');
+    const li = document.createElement('li');
+    li.className = 'swipe-wrap';
+    li.dataset.id = w.id;
+    li.innerHTML = `
+        <div class="swipe-actions">
+            <button class="swipe-delete-btn" data-delete-url="/workouts/${w.id}">Apagar</button>
+        </div>
+        <div class="swipe-content">
+            <div class="ios-list-item">
+                <div>
+                    <strong>${w.category}</strong><br>
+                    <small style="color: var(--ios-subtext);">${w.date}</small>
+                </div>
+                <a href="/workouts/${w.id}" style="color: var(--ios-blue); text-decoration: none; font-weight: 600;">Abrir ›</a>
+            </div>
+        </div>`;
+    list.prepend(li);
+    window.iosInteractive.initSwipe(list);
+    window.iosInteractive.applyStagger(document);
+}
+</script>
+{% endblock %}
+ 
