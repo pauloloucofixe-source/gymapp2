@@ -1,19 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="ios-greeting">{{ greeting }}</div>
 <h2>Últimos Treinos</h2>
-
+ 
 {% for w in workouts %}
-<div class="ios-card">
+<a href="{{ url_for('workouts.workout_detail', workout_id=w.id) }}" class="ios-card" style="display:block; text-decoration:none; color:inherit;">
     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
         <h3 style="font-size: 18px; font-weight: 600;">{{ w.category }}</h3>
         <span style="font-size: 13px; color: var(--ios-subtext);">{{ w.date }}</span>
     </div>
     <p style="font-size: 14px; color: var(--ios-subtext); margin-bottom: 12px;">{{ w.notes or 'Sem notas registadas.' }}</p>
-    <a href="{{ url_for('workouts.workout_detail', workout_id=w.id) }}" class="ios-btn ios-btn-secondary" style="font-size: 14px; padding: 8px;">Ver Séries</a>
-</div>
+    <span class="ios-badge">Ver séries ›</span>
+</a>
 {% else %}
-<div class="ios-card" style="text-align: center; color: var(--ios-subtext);">
-    <p>Ainda não tens treinos registados.</p>
+<div class="ios-card empty-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="14" x="6" y="5" rx="2"/><path d="M12 5v14"/></svg>
+    <p>Ainda não tens treinos registados.<br>Toca em "Treinos" para começar.</p>
 </div>
 {% endfor %}
 {% endblock %}
+ 
