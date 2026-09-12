@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+    <h2>Evolução de Peso Corporal</h2>
+    <article>
+        <canvas id="weightChart"></canvas>
+    </article>
+</section>
+
+<script>
+fetch('/analytics/api/weight-trend')
+    .then(r => r.json())
+    .then(data => {
+        const ctx = document.getElementById('weightChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.date),
+                datasets: [{
+                    label: 'Peso (kg)',
+                    data: data.map(d => d.weight),
+                    borderColor: '#2ecc71',
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: { responsive: true }
+        });
+    });
+</script>
+{% endblock %}

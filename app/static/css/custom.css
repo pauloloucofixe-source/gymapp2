@@ -1,0 +1,204 @@
+:root {
+    --ios-bg: #F2F2F7;
+    --ios-card: #FFFFFF;
+    --ios-text: #000000;
+    --ios-subtext: #8E8E93;
+    --ios-blue: #007AFF;
+    --ios-green: #34C759;
+    --ios-border: #E5E5EA;
+    --ios-tab-bg: rgba(255, 255, 255, 0.85);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --ios-bg: #000000;
+        --ios-card: #1C1C1E;
+        --ios-text: #FFFFFF;
+        --ios-subtext: #8E8E93;
+        --ios-blue: #0A84FF;
+        --ios-green: #30D158;
+        --ios-border: #2C2C2E;
+        --ios-tab-bg: rgba(28, 28, 30, 0.85);
+    }
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+}
+
+body {
+    background-color: var(--ios-bg);
+    color: var(--ios-text);
+    padding-top: calc(env(safe-area-inset-top) + 48px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 70px);
+    min-height: 100vh;
+}
+
+/* Header */
+.ios-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(env(safe-area-inset-top) + 44px);
+    padding-top: env(safe-area-inset-top);
+    background: var(--ios-tab-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 1000;
+    border-bottom: 0.5px solid var(--ios-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ios-header-title {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.4px;
+}
+
+/* Container */
+.ios-container {
+    padding: 16px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+/* Titles */
+h1, h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 14px;
+}
+
+/* iOS Cards */
+.ios-card {
+    background: var(--ios-card);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 0.5px solid var(--ios-border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.ios-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ios-subtext);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+/* Form Controls */
+.ios-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ios-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--ios-border);
+    background-color: var(--ios-bg);
+    color: var(--ios-text);
+    outline: none;
+}
+
+.ios-input:focus {
+    border-color: var(--ios-blue);
+}
+
+/* Buttons */
+.ios-btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background-color: var(--ios-blue);
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+.ios-btn:active {
+    transform: scale(0.97);
+    opacity: 0.85;
+}
+
+.ios-btn-secondary {
+    background-color: var(--ios-border);
+    color: var(--ios-text);
+}
+
+/* Table / Inset List */
+.ios-list {
+    list-style: none;
+}
+
+.ios-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 0.5px solid var(--ios-border);
+    font-size: 15px;
+}
+
+.ios-list-item:last-child {
+    border-bottom: none;
+}
+
+/* Bottom Tab Bar */
+.ios-tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(env(safe-area-inset-bottom) + 56px);
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--ios-tab-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    border-top: 0.5px solid var(--ios-border);
+    z-index: 1000;
+}
+
+.tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--ios-subtext);
+    font-size: 10px;
+    font-weight: 500;
+    gap: 3px;
+    transition: color 0.1s ease;
+}
+
+.tab-item svg {
+    width: 22px;
+    height: 22px;
+}
+
+.tab-item.active {
+    color: var(--ios-blue);
+}

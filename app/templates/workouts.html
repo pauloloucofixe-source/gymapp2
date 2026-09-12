@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Treinos</h2>
+
+<div class="ios-card">
+    <div class="ios-card-title">Novo Treino</div>
+    <form method="POST">
+        <div class="ios-input-group">
+            <!-- AQUI: adiciona value="{{ today }}" -->
+            <input type="date" name="date" class="ios-input" value="{{ today }}" required>
+            <input type="text" name="category" class="ios-input" placeholder="Divisão (ex: Peito / Tríceps)" required>
+            <input type="text" name="notes" class="ios-input" placeholder="Notas (opcional)">
+        </div>
+        <button type="submit" class="ios-btn">Criar Treino</button>
+    </form>
+</div>
+
+<div class="ios-card">
+    <div class="ios-card-title">Histórico Completo</div>
+    <ul class="ios-list">
+        {% for w in workouts %}
+        <li class="ios-list-item">
+            <div>
+                <strong>{{ w.category }}</strong><br>
+                <small style="color: var(--ios-subtext);">{{ w.date }}</small>
+            </div>
+            <a href="{{ url_for('workouts.workout_detail', workout_id=w.id) }}" style="color: var(--ios-blue); text-decoration: none; font-weight: 600;">Abrir ›</a>
+        </li>
+        {% else %}
+        <li class="ios-list-item" style="color: var(--ios-subtext);">Sem registos.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
