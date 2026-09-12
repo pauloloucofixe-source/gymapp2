@@ -1,31 +1,144 @@
 {% extends "base.html" %}
 {% block content %}
-<section>
-    <h2>Evolução de Peso Corporal</h2>
-    <article>
-        <canvas id="weightChart"></canvas>
-    </article>
-</section>
+<h2>Evolução</h2>
 
+<div class="segmented-control" id="analytics-tabs">
+    <button class="active" data-mode="weight">Peso</button>
+    <button data-mode="exercise">Exercício</button>
+</div>
+
+<div class="ios-card">
+    <div class="ios-card-title" id="chart-title">Peso Corporal</div>
+
+    <select class="ios-input" id="exercise-select" style="display:none; margin-bottom:14px;"></select>
+
+    <div id="chart-skeleton" class="skeleton" style="height:220px;"></div>
+    <canvas id="mainChart" height="220" style="display:none;"></canvas>
+    <div class="empty-state" id="chart-empty" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <p>Ainda não há dados suficientes.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
-fetch('/analytics/api/weight-trend')
-    .then(r => r.json())
-    .then(data => {
-        const ctx = document.getElementById('weightChart').getContext('2d');
-        new Chart(ctx, {
+(function () {
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const lineColor = getComputedStyle(document.documentElement).getPropertyValue('--ios-blue').trim() || '#007AFF';
+    const textColor = isDark ? '#8E8E93' : '#8E8E93';
+    const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+
+    let chart = null;
+    const canvas = document.getElementById('mainChart');
+    const skeleton = document.getElementById('chart-skeleton');
+    const emptyEl = document.getElementById('chart-empty');
+    const select = document.getElementById('exercise-select');
+    const title = document.getElementById('chart-title');
+
+    function showSkeleton() {
+        skeleton.style.display = 'block';
+        canvas.style.display = 'none';
+        emptyEl.style.display = 'none';
+    }
+
+    function renderChart(labels, values, label, color) {
+        skeleton.style.display = 'none';
+        if (!values.length) {
+            canvas.style.display = 'none';
+            emptyEl.style.display = 'block';
+            return;
+        }
+        emptyEl.style.display = 'none';
+        canvas.style.display = 'block';
+
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+        gradient.addColorStop(0, color + '33');
+        gradient.addColorStop(1, color + '00');
+
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: data.map(d => d.date),
+                labels,
                 datasets: [{
-                    label: 'Peso (kg)',
-                    data: data.map(d => d.weight),
-                    borderColor: '#2ecc71',
-                    fill: false,
-                    tension: 0.1
+                    label,
+                    data: values,
+                    borderColor: color,
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 3,
+                    pointBackgroundColor: color,
+                    pointBorderColor: '#fff',
+                    borderWidth: 2.5
                 }]
             },
-            options: { responsive: true }
+            options: {
+                responsive: true,
+                animation: { duration: 500, easing: 'easeOutQuart' },
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: textColor, maxRotation: 0 }, grid: { display: false } },
+                    y: { ticks: { color: textColor }, grid: { color: gridColor } }
+                }
+            }
         });
+    }
+
+    function loadWeight() {
+        title.textContent = 'Peso Corporal';
+        select.style.display = 'none';
+        showSkeleton();
+        fetch('/analytics/api/weight-trend')
+            .then(r => r.json())
+            .then(data => renderChart(data.map(d => d.date), data.map(d => d.weight), 'Peso (kg)', '#34C759'))
+            .catch(() => { skeleton.style.display = 'none'; emptyEl.style.display = 'block'; });
+    }
+
+    function loadExerciseList() {
+        return fetch('/analytics/api/exercises').then(r => r.json());
+    }
+
+    function loadExerciseProgress(id) {
+        showSkeleton();
+        fetch(`/analytics/api/exercise-progress/${id}`)
+            .then(r => r.json())
+            .then(data => renderChart(data.map(d => d.date), data.map(d => d.max_weight), 'Carga máxima (kg)', lineColor))
+            .catch(() => { skeleton.style.display = 'none'; emptyEl.style.display = 'block'; });
+    }
+
+    function switchMode(mode) {
+        document.querySelectorAll('#analytics-tabs button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+        if (mode === 'weight') {
+            loadWeight();
+        } else {
+            title.textContent = 'Progressão de Carga';
+            select.style.display = 'block';
+            if (select.dataset.loaded) {
+                if (select.value) loadExerciseProgress(select.value); else showSkeleton();
+                return;
+            }
+            showSkeleton();
+            loadExerciseList().then(list => {
+                select.dataset.loaded = '1';
+                select.innerHTML = list.map(e => `<option value="${e.id}">${e.muscle_group} - ${e.name}</option>`).join('');
+                if (list.length) loadExerciseProgress(list[0].id);
+                else { skeleton.style.display = 'none'; emptyEl.style.display = 'block'; }
+            });
+        }
+    }
+
+    document.getElementById('analytics-tabs').addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        switchMode(btn.dataset.mode);
     });
+
+    select.addEventListener('change', () => loadExerciseProgress(select.value));
+
+    loadWeight();
+})();
 </script>
 {% endblock %}
