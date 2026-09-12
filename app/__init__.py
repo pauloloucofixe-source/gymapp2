@@ -21,7 +21,9 @@ def create_app(test_config=None):
     from app.routes.workouts import bp as workouts_bp
     from app.routes.body import bp as body_bp
     from app.routes.analytics import bp as analytics_bp
+    from app.routes.exercises import bp as exercises_bp
 
+    app.register_blueprint(exercises_bp)
     app.register_blueprint(workouts_bp)
     app.register_blueprint(body_bp)
     app.register_blueprint(analytics_bp)
