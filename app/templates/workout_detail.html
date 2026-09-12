@@ -3,41 +3,101 @@
 <a href="{{ url_for('workouts.list_create_workouts') }}" style="color: var(--ios-blue); text-decoration: none; font-size: 15px;">‹ Voltar</a>
 <h2 style="margin-top: 8px;">{{ workout.category }}</h2>
 <p style="color: var(--ios-subtext); margin-top: -8px; margin-bottom: 16px; font-size: 14px;">{{ workout.date }} {% if workout.notes %}• {{ workout.notes }}{% endif %}</p>
-
+ 
 <div class="ios-card">
-    <div class="ios-card-title">Adicionar Série</div>
-    <form method="POST">
-        <div class="ios-input-group">
-            <select name="exercise_id" class="ios-input" required>
-                {% for ex in exercises %}
-                <option value="{{ ex.id }}">{{ ex.muscle_group }} - {{ ex.name }}</option>
-                {% endfor %}
-            </select>
-            <div style="display: flex; gap: 8px;">
-                <input type="number" name="reps" class="ios-input" placeholder="Reps" min="1" required>
-                <input type="number" step="0.5" name="weight" class="ios-input" placeholder="Carga (kg)" min="0" required>
-            </div>
-        </div>
-        <button type="submit" class="ios-btn">Registar Série</button>
-    </form>
-</div>
-
-<div class="ios-card">
-    <div class="ios-card-title">Séries Registadas</div>
-    <ul class="ios-list">
+    <div class="ios-card-title">
+        <span>Séries Registadas</span>
+        <span class="ios-badge" id="set-count">{{ sets|length }}</span>
+    </div>
+    <ul class="ios-list" id="sets-list">
         {% for s in sets %}
-        <li class="ios-list-item">
-            <div>
-                <strong>{{ s.exercise_name }}</strong>
-                <small style="display: block; color: var(--ios-subtext);">Série #{{ s.set_number }}</small>
+        <li class="swipe-wrap" data-id="{{ s.id }}">
+            <div class="swipe-actions">
+                <button class="swipe-delete-btn" data-delete-url="{{ url_for('workouts.delete_set', workout_id=workout.id, set_id=s.id) }}">Apagar</button>
             </div>
-            <span style="font-size: 16px; font-weight: 600; color: var(--ios-blue);">
-                {{ s.reps }} reps × {{ s.weight }} kg
-            </span>
+            <div class="swipe-content">
+                <div class="ios-list-item">
+                    <div>
+                        <strong>{{ s.exercise_name }}</strong>
+                        <small style="display: block; color: var(--ios-subtext);">Série #{{ s.set_number }}</small>
+                    </div>
+                    <span style="font-size: 16px; font-weight: 600; color: var(--ios-blue);">
+                        {{ s.reps }} reps × {{ s.weight }} kg
+                    </span>
+                </div>
+            </div>
         </li>
-        {% else %}
-        <li class="ios-list-item" style="color: var(--ios-subtext);">Nenhuma série ainda.</li>
         {% endfor %}
     </ul>
+    <div class="empty-state" id="sets-empty" {% if sets %}style="display:none;"{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
+        <p>Nenhuma série ainda.</p>
+    </div>
 </div>
+ 
+<button class="ios-fab" data-sheet-open="sheet-new-set" aria-label="Nova série">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+{% endblock %}
+ 
+{% block sheets %}
+<div class="sheet-overlay" id="sheet-new-set">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">Adicionar Série</div>
+        <form method="POST" action="{{ url_for('workouts.workout_detail', workout_id=workout.id) }}"
+              data-ajax data-ajax-success="onSetCreated" data-success-message="Série registada">
+            <div class="ios-input-group">
+                <select name="exercise_id" class="ios-input" required>
+                    {% for ex in exercises %}
+                    <option value="{{ ex.id }}">{{ ex.muscle_group }} - {{ ex.name }}</option>
+                    {% endfor %}
+                </select>
+                <div style="display: flex; gap: 8px;">
+                    <input type="number" name="reps" class="ios-input" placeholder="Reps" min="1" required>
+                    <input type="number" step="0.5" name="weight" class="ios-input" placeholder="Carga (kg)" min="0" required>
+                </div>
+            </div>
+            <button type="submit" class="ios-btn">
+                <span class="ios-spinner"></span>
+                <span class="btn-label">Registar Série</span>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+ 
+{% block scripts %}
+<script>
+function onSetCreated(s) {
+    const emptyState = document.getElementById('sets-empty');
+    if (emptyState) emptyState.style.display = 'none';
+ 
+    const list = document.getElementById('sets-list');
+    const li = document.createElement('li');
+    li.className = 'swipe-wrap';
+    li.dataset.id = s.id;
+    li.innerHTML = `
+        <div class="swipe-actions">
+            <button class="swipe-delete-btn" data-delete-url="/workouts/{{ workout.id }}/sets/${s.id}">Apagar</button>
+        </div>
+        <div class="swipe-content">
+            <div class="ios-list-item">
+                <div>
+                    <strong>${s.exercise_name}</strong>
+                    <small style="display: block; color: var(--ios-subtext);">Série #${s.set_number}</small>
+                </div>
+                <span style="font-size: 16px; font-weight: 600; color: var(--ios-blue);">
+                    ${s.reps} reps × ${s.weight} kg
+                </span>
+            </div>
+        </div>`;
+    list.appendChild(li);
+    window.iosInteractive.initSwipe(list);
+    window.iosInteractive.applyStagger(document);
+ 
+    const countEl = document.getElementById('set-count');
+    if (countEl) countEl.textContent = String(parseInt(countEl.textContent || '0', 10) + 1);
+}
+</script>
 {% endblock %}
