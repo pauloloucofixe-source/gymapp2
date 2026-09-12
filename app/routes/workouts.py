@@ -107,7 +107,35 @@ def workout_detail(workout_id):
         ORDER BY s.id ASC
     """, (workout_id,)).fetchall()
 
-    return render_template('workout_detail.html', workout=workout, exercises=exercises, sets=sets)
+    # Exercícios já usados neste treino, com a última carga/reps, do mais recente para o mais antigo
+    # (a extensão do SQLite garante que reps/weight vêm da mesma linha do MAX(s.id))
+    used_exercises = db.execute("""
+        SELECT e.id, e.name, e.muscle_group, s.reps as last_reps, s.weight as last_weight,
+               MAX(s.id) as last_set_id
+        FROM sets s
+        JOIN exercises e ON s.exercise_id = e.id
+        WHERE s.workout_id = ?
+        GROUP BY s.exercise_id
+        ORDER BY last_set_id DESC
+    """, (workout_id,)).fetchall()
+
+    last_set = None
+    if sets:
+        last_row = max(sets, key=lambda s: s['id'])
+        last_exercise_id = db.execute(
+            "SELECT exercise_id FROM sets WHERE id = ?", (last_row['id'],)
+        ).fetchone()['exercise_id']
+        last_set = {
+            'exercise_id': last_exercise_id,
+            'exercise_name': last_row['exercise_name'],
+            'reps': last_row['reps'],
+            'weight': last_row['weight']
+        }
+
+    return render_template(
+        'workout_detail.html', workout=workout, exercises=exercises, sets=sets,
+        used_exercises=used_exercises, last_set=last_set
+    )
 
 @bp.route('/workouts/<int:workout_id>/sets/<int:set_id>', methods=['DELETE'])
 def delete_set(workout_id, set_id):
