@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Exercícios</h2>
+
+<div class="ios-card">
+    <div class="ios-card-title">Novo Exercício</div>
+    <form method="POST">
+        <div class="ios-input-group">
+            <input type="text" name="name" class="ios-input" placeholder="Nome (ex: Supino Inclinado com Halteres)" required>
+            <select name="muscle_group" class="ios-input" required>
+                <option value="" disabled selected>Seleciona o Grupo Muscular</option>
+                <option value="Peito">Peito</option>
+                <option value="Costas">Costas</option>
+                <option value="Pernas">Pernas</option>
+                <option value="Ombros">Ombros</option>
+                <option value="Bíceps">Bíceps</option>
+                <option value="Tríceps">Tríceps</option>
+                <option value="Abdominal">Abdominal</option>
+                <option value="Outro">Outro</option>
+            </select>
+        </div>
+        <button type="submit" class="ios-btn">Adicionar Exercício</button>
+    </form>
+</div>
+
+<div class="ios-card">
+    <div class="ios-card-title">Lista de Exercícios</div>
+    <ul class="ios-list">
+        {% for ex in exercises %}
+        <li class="ios-list-item">
+            <div>
+                <strong>{{ ex.name }}</strong>
+                <small style="display: block; color: var(--ios-subtext);">{{ ex.muscle_group }}</small>
+            </div>
+        </li>
+        {% else %}
+        <li class="ios-list-item" style="color: var(--ios-subtext);">Nenhum exercício registado.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
