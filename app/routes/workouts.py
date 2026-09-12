@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 from app.db import get_db
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -8,13 +8,27 @@ bp = Blueprint('workouts', __name__)
 def get_today_pt():
     return datetime.now(ZoneInfo("Europe/Lisbon")).strftime('%Y-%m-%d')
 
+def wants_json():
+    return request.headers.get('X-Requested-With') == 'fetch'
+
+def greeting_for(hour):
+    if hour < 6:
+        return "Boa madrugada"
+    if hour < 12:
+        return "Bom dia"
+    if hour < 20:
+        return "Boa tarde"
+    return "Boa noite"
+
 @bp.route('/')
 def index():
     db = get_db()
     workouts = db.execute(
         "SELECT * FROM workouts ORDER BY date DESC LIMIT 10"
     ).fetchall()
-    return render_template('index.html', workouts=workouts)
+    now = datetime.now(ZoneInfo("Europe/Lisbon"))
+    greeting = greeting_for(now.hour)
+    return render_template('index.html', workouts=workouts, greeting=greeting)
 
 @bp.route('/workouts', methods=['GET', 'POST'])
 def list_create_workouts():
@@ -25,16 +39,31 @@ def list_create_workouts():
         category = request.form.get('category')
         notes = request.form.get('notes', '')
 
-        db.execute(
+        cur = db.execute(
             "INSERT INTO workouts (date, category, notes) VALUES (?, ?, ?)",
             (date, category, notes)
         )
         db.commit()
+
+        if wants_json():
+            return jsonify({
+                'id': cur.lastrowid,
+                'date': date,
+                'category': category,
+                'notes': notes
+            })
         return redirect(url_for('workouts.list_create_workouts'))
 
     today = get_today_pt()
     workouts = db.execute("SELECT * FROM workouts ORDER BY date DESC").fetchall()
     return render_template('workouts.html', workouts=workouts, today=today)
+
+@bp.route('/workouts/<int:workout_id>', methods=['DELETE'])
+def delete_workout(workout_id):
+    db = get_db()
+    db.execute("DELETE FROM workouts WHERE id = ?", (workout_id,))
+    db.commit()
+    return jsonify({'ok': True})
 
 @bp.route('/workouts/<int:workout_id>', methods=['GET', 'POST'])
 def workout_detail(workout_id):
@@ -49,16 +78,27 @@ def workout_detail(workout_id):
             (workout_id, exercise_id)
         ).fetchone()['count']
 
-        db.execute(
+        set_number = current_sets + 1
+        cur = db.execute(
             "INSERT INTO sets (workout_id, exercise_id, set_number, reps, weight) VALUES (?, ?, ?, ?, ?)",
-            (workout_id, exercise_id, current_sets + 1, reps, weight)
+            (workout_id, exercise_id, set_number, reps, weight)
         )
         db.commit()
+
+        if wants_json():
+            exercise = db.execute("SELECT name FROM exercises WHERE id = ?", (exercise_id,)).fetchone()
+            return jsonify({
+                'id': cur.lastrowid,
+                'exercise_name': exercise['name'] if exercise else '',
+                'set_number': set_number,
+                'reps': reps,
+                'weight': weight
+            })
         return redirect(url_for('workouts.workout_detail', workout_id=workout_id))
 
     workout = db.execute("SELECT * FROM workouts WHERE id = ?", (workout_id,)).fetchone()
     exercises = db.execute("SELECT * FROM exercises ORDER BY muscle_group, name").fetchall()
-    
+
     sets = db.execute("""
         SELECT s.id, e.name as exercise_name, s.set_number, s.reps, s.weight
         FROM sets s
@@ -68,3 +108,10 @@ def workout_detail(workout_id):
     """, (workout_id,)).fetchall()
 
     return render_template('workout_detail.html', workout=workout, exercises=exercises, sets=sets)
+
+@bp.route('/workouts/<int:workout_id>/sets/<int:set_id>', methods=['DELETE'])
+def delete_set(workout_id, set_id):
+    db = get_db()
+    db.execute("DELETE FROM sets WHERE id = ? AND workout_id = ?", (set_id, workout_id))
+    db.commit()
+    return jsonify({'ok': True})
