@@ -15,6 +15,14 @@ def weight_trend():
     ).fetchall()
     return jsonify([{'date': r['date'], 'weight': r['weight']} for r in records])
 
+@bp.route('/api/exercises')
+def list_exercises():
+    db = get_db()
+    exercises = db.execute(
+        "SELECT id, name, muscle_group FROM exercises ORDER BY muscle_group, name"
+    ).fetchall()
+    return jsonify([{'id': e['id'], 'name': e['name'], 'muscle_group': e['muscle_group']} for e in exercises])
+
 @bp.route('/api/exercise-progress/<int:exercise_id>')
 def exercise_progress(exercise_id):
     db = get_db()
