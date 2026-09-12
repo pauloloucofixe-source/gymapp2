@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Treinos</h2>
- 
+
 <div class="ios-card">
     <div class="ios-card-title">Histórico Completo</div>
     <ul class="ios-list" id="workouts-list">
@@ -27,10 +27,56 @@
         <p>Sem registos ainda.</p>
     </div>
 </div>
- 
+
 <button class="ios-fab" data-sheet-open="sheet-new-workout" aria-label="Novo treino">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 </button>
+{% endblock %}
+
+{% block sheets %}
+<div class="sheet-overlay" id="sheet-new-workout">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">Novo Treino</div>
+        <div class="chip-row" id="category-chips">
+            {% for c in ['Peito / Tríceps', 'Costas / Bíceps', 'Pernas', 'Ombros', 'Full Body', 'Cardio'] %}
+            <button type="button" class="chip">{{ c }}</button>
+            {% endfor %}
+        </div>
+        <form method="POST" action="{{ url_for('workouts.list_create_workouts') }}"
+              data-ajax data-ajax-success="onWorkoutCreated" data-success-message="Treino criado" id="workout-form">
+            <div class="ios-input-group">
+                <input type="date" name="date" class="ios-input" value="{{ today }}" data-today="{{ today }}" required>
+                <input type="text" name="category" id="category-input" class="ios-input" placeholder="Ou escreve a divisão…" required>
+                <input type="text" name="notes" class="ios-input" placeholder="Notas (opcional)">
+            </div>
+            <button type="submit" class="ios-btn">
+                <span class="ios-spinner"></span>
+                <span class="btn-label">Criar Treino</span>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('category-chips').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    document.querySelectorAll('#category-chips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    const input = document.getElementById('category-input');
+    input.value = chip.textContent.trim();
+    // Submete logo — só falta confirmar a data se quiseres mudar
+    document.getElementById('workout-form').requestSubmit();
+});
+
+function onWorkoutCreated(w) {
+    // Vai logo para o ecrã de séries — é isso que se quer a seguir a criar o treino
+    window.location.href = '/workouts/' + w.id;
+}
+</script>
 {% endblock %}
  
 {% block sheets %}
